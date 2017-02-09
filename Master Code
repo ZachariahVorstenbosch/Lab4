@@ -157,12 +157,16 @@ int timer = 0;
 bool turnDirection = true;
 int Zero = 0;
 
+bool turnAround_bool = false;
+bool findTrack_bool = false;
+
 //Functions
 bool turnAround(void);
 int trackLine(void);
+bool findTrack(bool turnDirection);
 
 void setup() {
-  Wire.begin();	      // Wire library required for I2CEncoder library
+  Wire.begin();        // Wire library required for I2CEncoder library
   Serial.begin(9600);
 
   CharliePlexM::setBtn(ci_Charlieplex_LED1, ci_Charlieplex_LED2,
@@ -298,7 +302,7 @@ void loop()
 #endif
 
           // set motor speeds
-          ui_Left_Motor_Speed = (constrain(ui_Motors_Speed + ui_Left_Motor_Offset, 1600, 2100)) - 445;
+          ui_Left_Motor_Speed = (constrain(ui_Motors_Speed + ui_Left_Motor_Offset, 1600, 2100)) - 410;
           ui_Right_Motor_Speed = (constrain(ui_Motors_Speed + ui_Right_Motor_Offset, 1600, 2100)) - 220;
 
           /***************************************************************************************
@@ -306,7 +310,25 @@ void loop()
             Adjust motor speed according to information from line tracking sensors and
             possibly encoder counts.
             /*************************************************************************************/
-            
+
+           if(!turnAround_bool)
+           {
+             turnAround_bool = turnAround();   
+           }
+
+           if(turnAround_bool && !findTrack_bool)
+           {
+             findTrack_bool = findTrack(turnDirection);
+           }
+
+           if(findTrack_bool)      /*Slow down the speed of findTrack so that the trackLine works properly*/
+           {
+             trackLine();
+           }
+
+           
+
+           
 #ifdef DEBUG_MOTORS
               Serial.print("Motors enabled: ");
               Serial.print(bt_Motors_Enabled);
@@ -581,6 +603,8 @@ int trackLine(void)
             encoder_RightMotor.zero();
           }
 
+          mode = 2;
+          
           switch (mode)
           {
             case 0: //Reverse
@@ -677,7 +701,7 @@ int trackLine(void)
                 break;
               }
 
-            case 3: //Turn 90 Degrees (turnDirection: true = Left, false = Right)
+            case 3: //Turn 90 Degrees (turnDirection: true = turn Right, false = turn Left)
               {
                 Zero = 1;
 
@@ -858,23 +882,63 @@ bool turnAround(void)
   if(progress==0)
     {
     servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+    servo_LeftMotor.writeMicroseconds((1500 - (ui_Left_Motor_Speed - 1500)));
     }
-  if(ui_Left_Line_Tracker_Data > (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) //Greater than for light is on, and so it is off the track
+  if(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) //Greater than for light is off, and so it is on the track
     {
-    if(ui_Right_Line_Tracker_Data > (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+    if(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
       {
-      if(ui_Middle_Line_Tracker_Data > (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+      if(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
         {
         progress = 1;
         }
       }
     }
-  if((ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))&&(progress==1))
+  if((ui_Middle_Line_Tracker_Data > (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))&&(progress==1))
     {
-    servor_RightMotor.WriteMicroseconds(ci_Right_Motor_Stop);
+    servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+    servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
     progress=0;
     return true;
     }
   return false;
 }
 
+bool findTrack(bool turnDirection) //turnDirection: true = Turn Right  false = Turn Left
+{
+  if(turnDirection)
+  {
+    ui_Left_Motor_Speed += 50;
+    servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+    servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+  }
+  else
+  {
+    servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+    servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+  }
+
+  static int progress=0;
+
+  if(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) //Greater than for light is off, and so it is on the track
+    {
+    if(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+      {
+      if(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+        {
+        progress = 1;
+        }
+      }
+    }
+  if((ui_Middle_Line_Tracker_Data > (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))&&(progress==1))
+  {
+    progress = 0;
+    servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+    servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
