@@ -310,21 +310,69 @@ void loop()
             Adjust motor speed according to information from line tracking sensors and
             possibly encoder counts.
             /*************************************************************************************/
-
-           if(!turnAround_bool)
+           static int completion = 0;
+           
+           if(completion == 0)
            {
-             turnAround_bool = turnAround();   
+             if(turnAround())
+               completion++;
            }
-
-           if(turnAround_bool && !findTrack_bool)
+           if(completion == 1)
            {
-             findTrack_bool = findTrack(turnDirection);
+             if(findTrack(turnDirection))
+               completion++;
            }
-
-           if(findTrack_bool)      /*Slow down the speed of findTrack so that the trackLine works properly*/
+           if(completion == 2)
            {
-             trackLine();
+             if(trackLine())
+               completion++;
            }
+           if(completion == 3)
+           {
+             if() //Add funtion for 90 degree turn
+               completion++
+           }
+           if(completion == 4)
+           {
+             if() //Add the other 90 degree turn possibly
+               completion++
+           }
+           if(completion == 5)
+           {
+             if(lineTrack())
+               completion++
+           }
+           if(completion == 6)
+           {
+             if(turnAround())
+               completion++
+           }
+           if(completion == 7)
+           {
+             if(findTrack(turnDirection)) //turnDirection needs to be changed for this function
+               completion++
+           }
+           if(completion == 8)
+           {
+             if(lineTrack()) //Needs to stop halfway to stop looking for the light
+               completion++
+           }
+           //Add the rest of the steps of the program
+           
+           //if(!turnAround_bool)
+           //{
+           //  turnAround_bool = turnAround();   
+           //}
+
+           //if(turnAround_bool && !findTrack_bool)
+           //{
+           //  findTrack_bool = findTrack(turnDirection);
+           //}
+
+           //if(findTrack_bool)      /*Slow down the speed of findTrack so that the trackLine works properly*/
+           //{
+           //  trackLine();
+           //}
 
            
 
