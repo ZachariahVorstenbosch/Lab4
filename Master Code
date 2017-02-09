@@ -157,8 +157,16 @@ int timer = 0;
 bool turnDirection = true;
 int Zero = 0;
 
+bool turnAround_bool = false;
+bool findTrack_bool = false;
+
+//Functions
+bool turnAround(void);
+int trackLine(void);
+bool findTrack(bool turnDirection);
+
 void setup() {
-  Wire.begin();	      // Wire library required for I2CEncoder library
+  Wire.begin();        // Wire library required for I2CEncoder library
   Serial.begin(9600);
 
   CharliePlexM::setBtn(ci_Charlieplex_LED1, ci_Charlieplex_LED2,
@@ -294,7 +302,7 @@ void loop()
 #endif
 
           // set motor speeds
-          ui_Left_Motor_Speed = (constrain(ui_Motors_Speed + ui_Left_Motor_Offset, 1600, 2100)) - 445;
+          ui_Left_Motor_Speed = (constrain(ui_Motors_Speed + ui_Left_Motor_Offset, 1600, 2100)) - 410;
           ui_Right_Motor_Speed = (constrain(ui_Motors_Speed + ui_Right_Motor_Offset, 1600, 2100)) - 220;
 
           /***************************************************************************************
@@ -302,288 +310,25 @@ void loop()
             Adjust motor speed according to information from line tracking sensors and
             possibly encoder counts.
             /*************************************************************************************/
-          servo_ArmMotor.detach();
-          servo_GripMotor.detach();
-          
-          ui_Left_Line_Tracker_Data = analogRead(ci_Left_Line_Tracker);
-          ui_Middle_Line_Tracker_Data = analogRead(ci_Middle_Line_Tracker);
-          ui_Right_Line_Tracker_Data = analogRead(ci_Right_Line_Tracker);
 
-          if (Zero == 0)
-          {
-            encoder_LeftMotor.zero();
-            encoder_RightMotor.zero();
-          }
+           if(!turnAround_bool)
+           {
+             turnAround_bool = turnAround();   
+           }
 
-          switch (mode)
-          {
-            case 0: //Reverse
-              {
-                Zero = 1;
-                Serial.println(encoder_RightMotor.getRawPosition());
-                 break;
-              }
-            case 1: //Find Track
-              {
-                 break;
-              }
-            case 2: //Follow Line
-              {
-                if ((ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
-                {
-                  timer++;
-                  if(timer > 5)
-                  {
-                    End_Of_Track = 1;
-                  }
-                }
-                else
-                {
-                  timer = 0;
-                  End_Of_Track = 0;
-                }
+           if(turnAround_bool && !findTrack_bool)
+           {
+             findTrack_bool = findTrack(turnDirection);
+           }
 
-                if (End_Of_Track == 0)
-                {
-                  if (ui_Right_Line_Tracker_Data > (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
-                  {
-                    ui_Right_Motor_Speed -= 200;
-                    servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
-                    //            Serial.print("Motor Speed: Right = ");
-                    //            Serial.print(ui_Right_Motor_Speed);
-                  }
-                  else
-                  {
-                    servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
-                    //            Serial.print("Motor Speed: Right = ");
-                    //            Serial.print(ui_Right_Motor_Speed);
-                  }
+           if(findTrack_bool)      /*Slow down the speed of findTrack so that the trackLine works properly*/
+           {
+             trackLine();
+           }
 
-                  if (ui_Middle_Line_Tracker_Data > (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
-                  {
-                    //            servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
-                    //            servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
-                    Serial.println("Yep");
-                  }
-                  else
-                  {
-                    Serial.println("NOPE");
-                  }
+           
 
-                  if (ui_Left_Line_Tracker_Data > (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
-                  {
-                    ui_Left_Motor_Speed -= 200;
-                    servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
-                    Serial.print("  Left = ");
-                    Serial.println(ui_Left_Motor_Speed);
-                  }
-                  else
-                  {
-                    servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
-                    Serial.print("  Left = ");
-                    Serial.println(ui_Left_Motor_Speed);
-                  }
-                }
-                else
-                {
-                  servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
-                  servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
-
-                  //          Serial.print("Motor Speed: Right = ");
-                  //          Serial.print(ci_Right_Motor_Stop);
-                  //          Serial.print("  Left = ");
-                  //          Serial.println(ci_Left_Motor_Stop);
-
-                  if ((ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
-                  {
-                    timer = 0;
-                    End_Of_Track = 1;
-                  }
-                  else
-                  {
-                    timer++;
-                    if (timer > 100)
-                    {
-                      End_Of_Track = 0;
-                    }
-                  }
-                }
-                break;
-              }
-
-            case 3: //Turn 90 Degrees (turnDirection: true = Left, false = Right)
-              {
-                Zero = 1;
-
-                l_Left_Motor_Position = encoder_RightMotor.getRawPosition();  //For some reason the encoders are flipped. Left Encoder track the right encoder values
-                Serial.print("Left: ");
-                Serial.print(l_Left_Motor_Position);
-                Serial.print("  Right: ");
-                l_Right_Motor_Position = encoder_LeftMotor.getRawPosition();
-                Serial.println(l_Right_Motor_Position);
-
-                if (turnDirection)
-                {
-                  servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
-                  servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
-
-                  if (l_Left_Motor_Position < -780)
-                  {
-                    mode = 0;
-                    servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
-                    Zero = 0;
-                    break;
-                  }
-                  else
-                  {
-                    break;
-                  }
-                }
-                else
-                {
-                  servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
-                  servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
-
-                  if (l_Right_Motor_Position < -780)
-                  {
-                    mode = 0;
-                    servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
-                    Zero = 0;
-                    break;
-                  }
-                  else
-                  {
-                    break;
-                  }
-                }
-                //
-                //            servo_GripMotor.write(ci_Grip_Motor_Open);
-                //
-                //            println(analogRead(ci_Light_Sensor));  //USE TO DETERMINE WHAT THE SENSOR READS WHEN IT SEES THE LIGHT
-                //            while(analogRead(ci_Light_Sensor))
-              }
-            case 4: //Turn 180
-              {
-                Zero = 1;
-
-                l_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
-                l_Right_Motor_Position = encoder_RightMotor.getRawPosition();
-
-                ui_Right_Motor_Speed -= (2 * (ui_Right_Motor_Speed - 1500));
-
-                servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
-                servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
-
-                int i;
-                  
-                            if(l_Left_Motor_Position < -780)              /*Fix this code so that both wheels stop before it moves on and restarts the zeroing process*/
-                            {
-                              i = 0;
-                              servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
-                              Zero = 0;
-                              i++;
-                            }
-                            else
-                            {
-                              Zero = 1;
-                              i=0;
-                            }
-                
-                            if(l_Right_Motor_Position > 780)
-                            {
-                              servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
-                              Zero = 0;
-                              i++;
-                            }
-                            else
-                            {
-                              Zero = 1;
-                              i=0;
-                            }
-
-                            if(i == 2)
-                            {
-                              mode = 0;
-                              break;
-                            }
-                            else
-                            {
-                              break;
-                            }
-              }
-            case 5:
-              {
-                if ((ui_Middle_Line_Tracker_Data > (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Left_Line_Tracker_Data > (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Right_Line_Tracker_Data > (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
-                {
-                  Arm_Start = 1;
-                }
-                else
-                {
-                  Arm_Start = 0;
-                }
-
-                if (Arm_Start == 0)             /*CHANGE CODE TO USE ULTRASONIC SENSOR PING TO DETERMINE DIST. FROM BOX*/
-                {
-                  //              if(ui_Right_Line_Tracker_Data > (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
-                  //              {
-                  //                ui_Right_Motor_Speed -= 200;
-                  //                servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
-                  //    //            Serial.print("Motor Speed: Right = ");
-                  //    //            Serial.print(ui_Right_Motor_Speed);
-                  //              }
-                  //              else
-                  //              {
-                  //                servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
-                  //    //            Serial.print("Motor Speed: Right = ");
-                  //    //            Serial.print(ui_Right_Motor_Speed);
-                  //              }
-                  //
-                  //              if(ui_Middle_Line_Tracker_Data > (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
-                  //              {
-                  //    //            servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
-                  //    //            servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
-                  //                Serial.println("Yep");
-                  //              }
-                  //              else
-                  //              {
-                  //                Serial.println("NOPE");
-                  //              }
-                  //
-                  //              if(ui_Left_Line_Tracker_Data > (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
-                  //              {
-                  //                ui_Left_Motor_Speed -= 200;
-                  //                servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
-                  //                Serial.print("  Left = ");
-                  //                Serial.println(ui_Left_Motor_Speed);
-                  //              }
-                  //              else
-                  //              {
-                  //                servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
-                  //                Serial.print("  Left = ");
-                  //                Serial.println(ui_Left_Motor_Speed);
-                  //              }
-                  //            }
-                  //            else
-                  //            {
-                  //              servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
-                  //              servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
-                  //            }
-                }
-                  break;
-                }
-              }
-
-
-              //        if(bt_Motors_Enabled)
-              //        {
-              //          servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
-              //          servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
-              //        }
-              //        else
-              //        {
-              //          servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
-              //          servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
-              //        }
+           
 #ifdef DEBUG_MOTORS
               Serial.print("Motors enabled: ");
               Serial.print(bt_Motors_Enabled);
@@ -843,6 +588,357 @@ void loop()
 #endif
   }
 
+int trackLine(void)
+{
+    servo_ArmMotor.detach();
+          servo_GripMotor.detach();
+          
+          ui_Left_Line_Tracker_Data = analogRead(ci_Left_Line_Tracker);
+          ui_Middle_Line_Tracker_Data = analogRead(ci_Middle_Line_Tracker);
+          ui_Right_Line_Tracker_Data = analogRead(ci_Right_Line_Tracker);
+
+          if (Zero == 0)
+          {
+            encoder_LeftMotor.zero();
+            encoder_RightMotor.zero();
+          }
+
+          mode = 2;
+          
+          switch (mode)
+          {
+            case 0: //Reverse
+              {
+                Zero = 1;
+                Serial.println(encoder_RightMotor.getRawPosition());
+                 break;
+              }
+            case 1: //Find Track
+              {
+                 break;
+              }
+            case 2: //Follow Line
+              {
+                if ((ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
+                {
+                  timer++;
+                  if(timer > 5)
+                  {
+                    End_Of_Track = 1;
+                  }
+                }
+                else
+                {
+                  timer = 0;
+                  End_Of_Track = 0;
+                }
+
+                if (End_Of_Track == 0)
+                {
+                  if (ui_Right_Line_Tracker_Data > (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+                  {
+                    ui_Right_Motor_Speed -= 200;
+                    servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+                    //            Serial.print("Motor Speed: Right = ");
+                    //            Serial.print(ui_Right_Motor_Speed);
+                  }
+                  else
+                  {
+                    servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+                    //            Serial.print("Motor Speed: Right = ");
+                    //            Serial.print(ui_Right_Motor_Speed);
+                  }
+
+                  if (ui_Middle_Line_Tracker_Data > (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+                  {
+                    //            servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+                    //            servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+                    Serial.println("Yep");
+                  }
+                  else
+                  {
+                    Serial.println("NOPE");
+                  }
+
+                  if (ui_Left_Line_Tracker_Data > (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+                  {
+                    ui_Left_Motor_Speed -= 200;
+                    servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+                    Serial.print("  Left = ");
+                    Serial.println(ui_Left_Motor_Speed);
+                  }
+                  else
+                  {
+                    servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+                    Serial.print("  Left = ");
+                    Serial.println(ui_Left_Motor_Speed);
+                  }
+                }
+                else
+                {
+                  servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+                  servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+
+                  //          Serial.print("Motor Speed: Right = ");
+                  //          Serial.print(ci_Right_Motor_Stop);
+                  //          Serial.print("  Left = ");
+                  //          Serial.println(ci_Left_Motor_Stop);
+
+                  if ((ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
+                  {
+                    timer = 0;
+                    End_Of_Track = 1;
+                  }
+                  else
+                  {
+                    timer++;
+                    if (timer > 100)
+                    {
+                      End_Of_Track = 0;
+                    }
+                  }
+                }
+                break;
+              }
+
+            case 3: //Turn 90 Degrees (turnDirection: true = turn Right, false = turn Left)
+              {
+                Zero = 1;
+
+                l_Left_Motor_Position = encoder_RightMotor.getRawPosition();  //For some reason the encoders are flipped. Left Encoder track the right encoder values
+                Serial.print("Left: ");
+                Serial.print(l_Left_Motor_Position);
+                Serial.print("  Right: ");
+                l_Right_Motor_Position = encoder_LeftMotor.getRawPosition();
+                Serial.println(l_Right_Motor_Position);
+
+                if (turnDirection)
+                {
+                  servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+                  servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+
+                  if (l_Left_Motor_Position < -780)
+                  {
+                    mode = 0;
+                    servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+                    Zero = 0;
+                    break;
+                  }
+                  else
+                  {
+                    break;
+                  }
+                }
+                else
+                {
+                  servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+                  servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+
+                  if (l_Right_Motor_Position < -780)
+                  {
+                    mode = 0;
+                    servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+                    Zero = 0;
+                    break;
+                  }
+                  else
+                  {
+                    break;
+                  }
+                }
+                //
+                //            servo_GripMotor.write(ci_Grip_Motor_Open);
+                //
+                //            println(analogRead(ci_Light_Sensor));  //USE TO DETERMINE WHAT THE SENSOR READS WHEN IT SEES THE LIGHT
+                //            while(analogRead(ci_Light_Sensor))
+              }
+            case 4: //Turn 180
+              {
+                Zero = 1;
+
+                l_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
+                l_Right_Motor_Position = encoder_RightMotor.getRawPosition();
+
+                ui_Right_Motor_Speed -= (2 * (ui_Right_Motor_Speed - 1500));
+
+                servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+                servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+
+                int i;
+                  
+                            if(l_Left_Motor_Position < -780)              /*Fix this code so that both wheels stop before it moves on and restarts the zeroing process*/
+                            {
+                              i = 0;
+                              servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+                              Zero = 0;
+                              i++;
+                            }
+                            else
+                            {
+                              Zero = 1;
+                              i=0;
+                            }
+                
+                            if(l_Right_Motor_Position > 780)
+                            {
+                              servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+                              Zero = 0;
+                              i++;
+                            }
+                            else
+                            {
+                              Zero = 1;
+                              i=0;
+                            }
+
+                            if(i == 2)
+                            {
+                              mode = 0;
+                              break;
+                            }
+                            else
+                            {
+                              break;
+                            }
+              }
+            case 5:
+              {
+                if ((ui_Middle_Line_Tracker_Data > (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Left_Line_Tracker_Data > (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Right_Line_Tracker_Data > (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
+                {
+                  Arm_Start = 1;
+                }
+                else
+                {
+                  Arm_Start = 0;
+                }
+
+                if (Arm_Start == 0)             /*CHANGE CODE TO USE ULTRASONIC SENSOR PING TO DETERMINE DIST. FROM BOX*/
+                {
+                  //              if(ui_Right_Line_Tracker_Data > (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+                  //              {
+                  //                ui_Right_Motor_Speed -= 200;
+                  //                servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+                  //    //            Serial.print("Motor Speed: Right = ");
+                  //    //            Serial.print(ui_Right_Motor_Speed);
+                  //              }
+                  //              else
+                  //              {
+                  //                servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+                  //    //            Serial.print("Motor Speed: Right = ");
+                  //    //            Serial.print(ui_Right_Motor_Speed);
+                  //              }
+                  //
+                  //              if(ui_Middle_Line_Tracker_Data > (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+                  //              {
+                  //    //            servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+                  //    //            servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+                  //                Serial.println("Yep");
+                  //              }
+                  //              else
+                  //              {
+                  //                Serial.println("NOPE");
+                  //              }
+                  //
+                  //              if(ui_Left_Line_Tracker_Data > (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+                  //              {
+                  //                ui_Left_Motor_Speed -= 200;
+                  //                servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+                  //                Serial.print("  Left = ");
+                  //                Serial.println(ui_Left_Motor_Speed);
+                  //              }
+                  //              else
+                  //              {
+                  //                servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+                  //                Serial.print("  Left = ");
+                  //                Serial.println(ui_Left_Motor_Speed);
+                  //              }
+                  //            }
+                  //            else
+                  //            {
+                  //              servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+                  //              servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+                  //            }
+                }
+                  break;
+                }
+              }
 
 
+              //        if(bt_Motors_Enabled)
+              //        {
+              //          servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+              //          servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+              //        }
+              //        else
+              //        {
+              //          servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+              //          servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+              //        }
+}
 
+bool turnAround(void)
+{
+  static int progress=0;
+  if(progress==0)
+    {
+    servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+    servo_LeftMotor.writeMicroseconds((1500 - (ui_Left_Motor_Speed - 1500)));
+    }
+  if(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) //Greater than for light is off, and so it is on the track
+    {
+    if(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+      {
+      if(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+        {
+        progress = 1;
+        }
+      }
+    }
+  if((ui_Middle_Line_Tracker_Data > (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))&&(progress==1))
+    {
+    servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+    servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+    progress=0;
+    return true;
+    }
+  return false;
+}
+
+bool findTrack(bool turnDirection) //turnDirection: true = Turn Right  false = Turn Left
+{
+  if(turnDirection)
+  {
+    ui_Left_Motor_Speed += 50;
+    servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+    servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+  }
+  else
+  {
+    servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+    servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+  }
+
+  static int progress=0;
+
+  if(ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) //Greater than for light is off, and so it is on the track
+    {
+    if(ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+      {
+      if(ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
+        {
+        progress = 1;
+        }
+      }
+    }
+  if((ui_Middle_Line_Tracker_Data > (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))&&(progress==1))
+  {
+    progress = 0;
+    servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+    servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
