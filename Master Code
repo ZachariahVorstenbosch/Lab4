@@ -156,14 +156,18 @@ int Arm_Start = 0;
 int timer = 0;
 bool turnDirection = true;
 int Zero = 0;
+int i = 0;
+int turnLeftCounter = 0;
 
 bool turnAround_bool = false;
 bool findTrack_bool = false;
+int turn90_bool = true;
 
 //Functions
 bool turnAround(void);
 int trackLine(void);
 bool findTrack(bool turnDirection);
+void turn90(bool turnDirection);
 
 void setup() {
   Wire.begin();        // Wire library required for I2CEncoder library
@@ -302,31 +306,58 @@ void loop()
 #endif
 
           // set motor speeds
-          ui_Left_Motor_Speed = (constrain(ui_Motors_Speed + ui_Left_Motor_Offset, 1600, 2100)) - 410;
-          ui_Right_Motor_Speed = (constrain(ui_Motors_Speed + ui_Right_Motor_Offset, 1600, 2100)) - 220;
+          ui_Left_Motor_Speed = (constrain(ui_Motors_Speed + ui_Left_Motor_Offset, 1600, 2100)) - 440;
+          ui_Right_Motor_Speed = (constrain(ui_Motors_Speed + ui_Right_Motor_Offset, 1600, 2100)) - 250;
 
           /***************************************************************************************
             Add line tracking code here.
             Adjust motor speed according to information from line tracking sensors and
             possibly encoder counts.
-            /*************************************************************************************/
+          /*************************************************************************************/
 
-           if(!turnAround_bool)
+          if (Zero == 0)
+          {
+            encoder_LeftMotor.zero();
+            encoder_RightMotor.zero();
+          }
+
+//           if(!turnAround_bool)
+//           {
+//             turnAround_bool = turnAround();   
+//           }
+//
+//           if(turnAround_bool && !findTrack_bool)
+//           {
+//             findTrack_bool = findTrack(turnDirection);
+//           }
+//
+//           if(findTrack_bool && i = 0)      /*Slow down the speed of findTrack so that the trackLine works properly*/
+//           {
+//             i = trackLine();
+//           }
+
+//           if(i = 1)
+//           {
+//             turnDirection = false;
+//             turn90(turnDirection); //turn Left
+//             if(turn90_bool)
+//             {
+//               i++;
+//             }
+//           }
+//           if(i = 2)
+//           {
+//             turnDirection = true;
+//             turn90(turnDirection); //turn Right
+//             if(turn90_bool)
+//             {
+//               i++;
+//             }
+//           }
+           if(turn90_bool)
            {
-             turnAround_bool = turnAround();   
+             turn90(!turnDirection);
            }
-
-           if(turnAround_bool && !findTrack_bool)
-           {
-             findTrack_bool = findTrack(turnDirection);
-           }
-
-           if(findTrack_bool)      /*Slow down the speed of findTrack so that the trackLine works properly*/
-           {
-             trackLine();
-           }
-
-           
 
            
 #ifdef DEBUG_MOTORS
@@ -607,16 +638,8 @@ int trackLine(void)
           
           switch (mode)
           {
-            case 0: //Reverse
-              {
-                Zero = 1;
-                Serial.println(encoder_RightMotor.getRawPosition());
-                 break;
-              }
-            case 1: //Find Track
-              {
-                 break;
-              }
+            
+            
             case 2: //Follow Line
               {
                 if ((ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
@@ -624,7 +647,11 @@ int trackLine(void)
                   timer++;
                   if(timer > 5)
                   {
-                    End_Of_Track = 1;
+                    End_Of_Track = 1; //return 1;
+                /*  servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+                 *  servo_RIghtMotor.writeMicroseconds(ci_Right_Motor_Stop);
+                 *  return 1;
+                 */
                   }
                 }
                 else
@@ -637,7 +664,7 @@ int trackLine(void)
                 {
                   if (ui_Right_Line_Tracker_Data > (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
                   {
-                    ui_Right_Motor_Speed -= 200;
+                    ui_Right_Motor_Speed -= 150; //Decrease speed test to see if this will stop the jerkiness (Old speed = 200):Also try 100
                     servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
                     //            Serial.print("Motor Speed: Right = ");
                     //            Serial.print(ui_Right_Motor_Speed);
@@ -662,7 +689,7 @@ int trackLine(void)
 
                   if (ui_Left_Line_Tracker_Data > (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance))
                   {
-                    ui_Left_Motor_Speed -= 200;
+                    ui_Left_Motor_Speed -= 150; //Decrease speed test to see if this will stop the jerkiness (Old speed = 200):Also try 100
                     servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
                     Serial.print("  Left = ");
                     Serial.println(ui_Left_Motor_Speed);
@@ -684,8 +711,8 @@ int trackLine(void)
                   //          Serial.print("  Left = ");
                   //          Serial.println(ci_Left_Motor_Stop);
 
-                  if ((ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
-                  {
+/*comment out all*/if ((ui_Middle_Line_Tracker_Data < (ui_Middle_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Left_Line_Tracker_Data < (ui_Left_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)) && (ui_Right_Line_Tracker_Data < (ui_Right_Line_Tracker_Dark - ui_Line_Tracker_Tolerance)))
+/*of this*/       {
                     timer = 0;
                     End_Of_Track = 1;
                   }
@@ -754,52 +781,52 @@ int trackLine(void)
               }
             case 4: //Turn 180
               {
-                Zero = 1;
+                  int Zero = 1;
 
-                l_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
-                l_Right_Motor_Position = encoder_RightMotor.getRawPosition();
+  l_Left_Motor_Position = encoder_LeftMotor.getRawPosition();
+  l_Right_Motor_Position = encoder_RightMotor.getRawPosition();
 
-                ui_Right_Motor_Speed -= (2 * (ui_Right_Motor_Speed - 1500));
+  ui_Right_Motor_Speed -= (2 * (ui_Right_Motor_Speed - 1500));
 
-                servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
-                servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+  servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+  servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
 
-                int i;
+  int i;
                   
-                            if(l_Left_Motor_Position < -780)              /*Fix this code so that both wheels stop before it moves on and restarts the zeroing process*/
-                            {
-                              i = 0;
-                              servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
-                              Zero = 0;
-                              i++;
-                            }
-                            else
-                            {
-                              Zero = 1;
-                              i=0;
-                            }
+  if(l_Left_Motor_Position < -780)              /*Fix this code so that both wheels stop before it moves on and restarts the zeroing process*/
+  {
+    i = 0;
+    servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+    Zero = 0;
+    i++;
+  }
+  else
+  {
+    Zero = 1;
+    i=0;
+  }
                 
-                            if(l_Right_Motor_Position > 780)
-                            {
-                              servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
-                              Zero = 0;
-                              i++;
-                            }
-                            else
-                            {
-                              Zero = 1;
-                              i=0;
-                            }
+  if(l_Right_Motor_Position > 780)
+  {
+    servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+    Zero = 0;
+    i++;
+  }
+  else
+  {
+    Zero = 1;
+    i=0;
+  }
 
-                            if(i == 2)
-                            {
-                              mode = 0;
-                              break;
-                            }
-                            else
-                            {
-                              break;
-                            }
+  if(i == 2)
+  {
+    mode = 0;
+    break;
+  }
+  else
+  {
+    break;
+  }
               }
             case 5:
               {
@@ -908,12 +935,14 @@ bool findTrack(bool turnDirection) //turnDirection: true = Turn Right  false = T
 {
   if(turnDirection)
   {
-    ui_Left_Motor_Speed += 50;
+    ui_Right_Motor_Speed -= 25;
     servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
     servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
   }
   else
   {
+    ui_Left_Motor_Speed -= 50;
+    ui_Right_Motor_Speed -= 50;
     servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
     servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
   }
@@ -940,5 +969,53 @@ bool findTrack(bool turnDirection) //turnDirection: true = Turn Right  false = T
   else
   {
     return false;
+  }
+}
+
+void turn90(bool turnDirection)
+{
+  Zero = 1;
+  turn90_bool = false;
+  
+  l_Left_Motor_Position = encoder_RightMotor.getRawPosition();  //For some reason the encoders are flipped. Left Encoder track the right encoder values
+//  Serial.print("Left: ");
+//  Serial.print(l_Left_Motor_Position);
+//  Serial.print("  Right: ");
+  l_Right_Motor_Position = encoder_LeftMotor.getRawPosition();
+//  Serial.println(l_Right_Motor_Position);
+
+  if (turnDirection) //turnDirection: true = right, false = left
+  {
+    servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed);
+    servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+
+    if (l_Left_Motor_Position < -780)
+    {
+      servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+      Zero = 0;
+      turn90_bool = !turn90_bool;
+    }
+  }
+  else
+  {
+    servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed);
+    servo_LeftMotor.writeMicroseconds(ci_Left_Motor_Stop);
+
+//    if (l_Right_Motor_Position < -330)
+//    {
+//      servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+//      Zero = 0;
+//      turn90_bool = !turn90_bool;
+//    }
+    
+    turnLeftCounter++;
+    Serial.print("Counter: ");
+    Serial.println(turnLeftCounter);
+    if (turnLeftCounter > 320)
+    {
+      servo_RightMotor.writeMicroseconds(ci_Right_Motor_Stop);
+      Zero = 0;
+      turn90_bool = !turn90_bool;
+    }
   }
 }
