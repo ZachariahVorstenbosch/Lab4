@@ -310,21 +310,69 @@ void loop()
             Adjust motor speed according to information from line tracking sensors and
             possibly encoder counts.
             /*************************************************************************************/
-
-           if(!turnAround_bool)
+           static int completion = 0;
+           
+           if(completion == 0)
            {
-             turnAround_bool = turnAround();   
+             if(turnAround())
+               completion++;
            }
-
-           if(turnAround_bool && !findTrack_bool)
+           if(completion == 1)
            {
-             findTrack_bool = findTrack(turnDirection);
+             if(findTrack(turnDirection))
+               completion++;
            }
-
-           if(findTrack_bool)      /*Slow down the speed of findTrack so that the trackLine works properly*/
+           if(completion == 2)
            {
-             trackLine();
+             if(trackLine())
+               completion++;
            }
+           if(completion == 3)
+           {
+             if() //Add funtion for 90 degree turn
+               completion++
+           }
+           if(completion == 4)
+           {
+             if() //Add the other 90 degree turn possibly
+               completion++
+           }
+           if(completion == 5)
+           {
+             if(lineTrack())
+               completion++
+           }
+           if(completion == 6)
+           {
+             if(turnAround())
+               completion++
+           }
+           if(completion == 7)
+           {
+             if(findTrack(turnDirection)) //turnDirection needs to be changed for this function
+               completion++
+           }
+           if(completion == 8)
+           {
+             if(lineTrack()) //Needs to stop halfway to stop looking for the light
+               completion++
+           }
+           //Add the rest of the steps of the program
+           
+           //if(!turnAround_bool)
+           //{
+           //  turnAround_bool = turnAround();   
+           //}
+
+           //if(turnAround_bool && !findTrack_bool)
+           //{
+           //  findTrack_bool = findTrack(turnDirection);
+           //}
+
+           //if(findTrack_bool)      /*Slow down the speed of findTrack so that the trackLine works properly*/
+           //{
+           //  trackLine();
+           //}
 
            
 
@@ -942,3 +990,93 @@ bool findTrack(bool turnDirection) //turnDirection: true = Turn Right  false = T
     return false;
   }
 }
+
+bool findLight(void)
+{
+  //Try if you want
+}
+
+ bool grabLight(void)
+ {
+ static int stage = 0;
+ servo_GripMotor.attach();
+ servo_ArmMotor.attach();  
+  if(stage == 0)
+   {
+   servo_GripMotor.write(ci_Grip_Motor_Open);
+   if(servo_GripMotor.read()==(ci_Grip_Motor_Open))
+    stage++;
+   }
+  if(stage == 1)
+   {
+   servo_ArmMotor.write(ci_Arm_Motor_Extended);
+   if(servo_ArmMotor.read()==(ci_Arm_Motor_Extended))
+    stage++;
+   }
+  if(stage == 2)
+   {
+   servo_GripMotor.write(ci_Grip_Motor_Closed);
+   if(servo_GripMotor.read()==(ci_Grip_Motor_Closed))
+    stage++;
+   }
+  if(stage == 3)
+   {
+   servo_ArmMotor.write(ci_Arm_Motor_Retracted);
+   if(servo_ArmMotor.read()==(ci_Arm_Motor_Retracted))
+    stage++;
+   }
+   if(stage == 4)
+    {
+    servo_GripMotor.detach();
+    servo_ArmMotor.detach();
+    stage = 0;
+    return true;
+    }
+   return false;
+ }
+ 
+  bool dropLight(void)
+ {
+ static int stage = 0;
+ servo_GripMotor.attach();
+ servo_ArmMotor.attach();
+  //servo_GripMotor.write(ci_Grip_Motor_Closed);
+  //servo_GripMotor.detach();
+  //const int ci_Grip_Motor_Open = 140;         // test for correct value
+  //const int ci_Grip_Motor_Closed = 90;       
+  //const int ci_Arm_Servo_Retracted = 0;  
+  //const int ci_Arm_Servo_Extended = 55;       //test for correct value
+  
+  if(stage == 0)
+   {
+   servo_ArmMotor.write(ci_Arm_Motor_Extended);
+   if(servo_ArmMotor.read()==(ci_Arm_Motor_Extended))
+    stage++;
+   }
+  if(stage == 1)
+   {
+   servo_GripMotor.write(ci_Grip_Motor_Open);
+   if(servo_GripMotor.read()==(ci_Grip_Motor_Open))
+    stage++;
+   }
+  if(stage == 2)
+   {
+   servo_ArmMotor.write(ci_Arm_Motor_Retracted);
+   if(servo_ArmMotor.read()==(ci_Arm_Motor_Retracted))
+    stage++;
+   }
+  if(stage == 3)
+   {
+   servo_GripMotor.write(ci_Grip_Motor_Closed);
+   if(servo_GripMotor.read()==(ci_Grip_Motor_Closed))
+    stage++;
+   }
+   if(stage == 4)
+    {
+    servo_GripMotor.detach();
+    servo_ArmMotor.detach();
+    stage = 0;
+    return true;
+    }
+   return false;
+ }
