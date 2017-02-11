@@ -164,6 +164,8 @@ bool findTrack_bool = false;
 bool turnAround(void);
 int trackLine(void);
 bool findTrack(bool turnDirection);
+bool grabLight(void);
+bool dropLight(void);
 
 void setup() {
   Wire.begin();        // Wire library required for I2CEncoder library
@@ -330,32 +332,57 @@ void loop()
            if(completion == 3)
            {
              if() //Add funtion for 90 degree turn
-               completion++
+               completion++;
            }
            if(completion == 4)
            {
              if() //Add the other 90 degree turn possibly
-               completion++
+               completion++;
            }
            if(completion == 5)
            {
              if(lineTrack())
-               completion++
+               completion++;
            }
            if(completion == 6)
            {
              if(turnAround())
-               completion++
+               completion++;
            }
            if(completion == 7)
            {
              if(findTrack(turnDirection)) //turnDirection needs to be changed for this function
-               completion++
+               completion++;
            }
            if(completion == 8)
            {
-             if(lineTrack()) //Needs to stop halfway to stop looking for the light
-               completion++
+             if(lineTrack())
+               completion++;
+           }
+           if(completion == 9)
+           {
+             if(1) //Funtion to get in range of light
+               completion++;
+           }
+           if(completion == 10)
+           {
+             if(1) //Funtion to find the light, optional
+               completion++;
+           }
+           if(completion == 11)
+           {
+             if(grabLight())
+               completion++;
+           }
+           if(completion == 12)
+           {
+             if(1) //Funtion to turn to the end
+               completion++;
+           }
+           if(completion == 13)
+           {
+             if(dropLight())
+               completion++;
            }
            //Add the rest of the steps of the program
            
