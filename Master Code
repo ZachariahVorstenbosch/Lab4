@@ -166,6 +166,7 @@ int trackLine(void);
 bool findTrack(bool turnDirection);
 bool grabLight(void);
 bool dropLight(void);
+bool findLight(void);
 
 void setup() {
   Wire.begin();        // Wire library required for I2CEncoder library
@@ -361,25 +362,20 @@ void loop()
            }
            if(completion == 9)
            {
-             if(1) //Funtion to get in range of light
+             if(findLight()) //Funtion to get in range of light
                completion++;
            }
            if(completion == 10)
            {
-             if(1) //Funtion to find the light, optional
+             if(grabLight())
                completion++;
            }
            if(completion == 11)
            {
-             if(grabLight())
-               completion++;
-           }
-           if(completion == 12)
-           {
              if(1) //Funtion to turn to the end
                completion++;
            }
-           if(completion == 13)
+           if(completion == 12)
            {
              if(dropLight())
                completion++;
@@ -1020,7 +1016,38 @@ bool findTrack(bool turnDirection) //turnDirection: true = Turn Right  false = T
 
 bool findLight(void)
 {
-  //Try if you want
+ static int stage = 0, shift = 0;
+ if(stage == 0)
+ {
+  servo_LeftMotor.writeMicroseconds(ui_Left_Motor_Speed-100); // Test speeds, try to go slowly
+  servo_RightMotor.writeMicroseconds(ui_Right_Motor_Speed-100);
+  Ping();
+  if(ul_Echo_Time<200) //Test to find the actual time required
+   {
+    servo_Left_Motor.writeMicroseconds(ci_Left_Motor_Stop);
+    servo_RIght_Motor.writeMicroseconds(ci_Right_Motor_Stop);
+    stage++;
+   }
+  }
+ if((stage == 1)&&(shift == 0))
+ {
+  servo_Left_Motor. //turn to the right 30 ish degrees
+  servo_Right_Motor.
+  shift++;
+ }
+ if(stage == 1)
+ {
+  servo_Left_Motor. //turn to the left really slowly
+  servo_Right_Motor.
+  if(ci_Light_Sensor > 150) // Test for correct value
+  {
+   servo_Left_Motor.writeMicroseconds(ci_Left_Motor_Stop);
+   servo_RIght_Motor.writeMicroseconds(ci_Right_Motor_Stop);
+   stage = 0;
+   return true;
+  }
+ }
+  return false;
 }
 
  bool grabLight(void)
